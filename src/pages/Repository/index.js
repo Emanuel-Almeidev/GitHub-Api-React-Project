@@ -78,12 +78,11 @@ class Repository extends Component {
         this.loadIssues()
     }
 
-    handlePage = (direction) =>{
+    handlePage = (action) =>{
         const { page } = this.state;
-
-        direction === 'back'? page-- : page++
+        
         this.setState({
-            page,
+            page: action === 'back'? page - 1 : page + 1
         })
         this.loadIssues()
 
