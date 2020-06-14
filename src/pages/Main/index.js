@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 
 import api from '../../services/api' 
 
-import Container from '../../components/Container                                                                                            '
+import Container from '../../components/Container'
 import { SubmitButton, Form, List } from './styles'
 
 class Main extends Component{
@@ -13,6 +13,7 @@ class Main extends Component{
         newRepo: '',
         repositories: [],
         loading: false,
+        error404: false,
     };
 
     
@@ -40,6 +41,13 @@ class Main extends Component{
         })
     }
 
+    repositorioRepetido = () => {
+        const { repositories, newRepo } = this.state;
+        const resultado = repositories.filter(repository => repository.name === newRepo)
+        return resultado === [] ? false : true
+
+    }
+
     handleSubmit = async e => {
         e.preventDefault();
 
@@ -47,30 +55,46 @@ class Main extends Component{
             loading: true
         })
 
-        const { newRepo, repositories} = this.state;
-        
-        const response = await api.get(`/repos/${newRepo}`)
+        try{
+            if (this.repositorioRepetido()){
+                throw new Error('Repositório duplicado');
+            }else{
+                const { newRepo, repositories} = this.state;
+            
+                try{
+                    const response = await api.get(`/repos/${newRepo}`)
 
-        const data = {
-            name: response.data.full_name
-        };
-
-        this.setState({
-            repositories: [...repositories, data],
-            newRepo: '',
-            loading: false,
-        })
+                    const data = {
+                        name: response.data.full_name
+                    };
+            
+                    this.setState({
+                        repositories: [...repositories, data],
+                        newRepo: '',
+                        loading: false,
+                    })
+                }catch{
+                    throw new Error('Repositório não existe');
+                }
+            }
+        }catch{
+            this.setState({
+                error404: true,
+                loading: false,
+            })  
+        }
+    
     }
 
     render(){
-        const { newRepo, repositories, loading } = this.state;
+        const { newRepo, repositories, loading, error404 } = this.state;
         return (
             <Container>
                 <h1>
                     <FaGithubAlt/>
                     Repositórios
                 </h1>
-                <Form onSubmit={this.handleSubmit}>
+                <Form onSubmit={this.handleSubmit} error404={error404}>
                     <input 
                         type="text"
                         placeholder="Adicionar repositório"
