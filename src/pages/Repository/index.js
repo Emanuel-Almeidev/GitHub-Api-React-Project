@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 
 
 import Container from '../../components/Container'
-import { IssueList, Loading, Owner } from './styles'
+import { IssueList, IssueFilter, Loading, Owner } from './styles'
 
 class Repository extends Component {
 
@@ -21,6 +21,12 @@ class Repository extends Component {
     state = {
         repository: {},
         issues: [],
+        filterIssues: [
+            {state: 'all', label:"Todos", active:true},
+            {state: 'open', label:"Abertos", active:false},
+            {state: 'closed', label:"Fechados", active:false}
+        ],
+        filterIndex: 0,
         loading: true,
     }
 
@@ -30,11 +36,13 @@ class Repository extends Component {
 
         const repoName = decodeURIComponent(match.params.repository);
 
+        const {filterIssues, filterIndex} = this.state;
+
         const [repository, issues] = await Promise.all([
             api.get(`/repos/${repoName}`),
             api.get(`/repos/${repoName}/issues`), {
                 params: {
-                    state: 'open',
+                    state: filterIssues[filterIndex].state,
                     per_page: 5,
                 },
             },
@@ -47,8 +55,31 @@ class Repository extends Component {
         })
     }
 
+    handleFilterChange = async (index) => {
+        this.setState({
+            filterIndex: index,
+        })
+
+        const { filterIssues } = this.state;
+
+        const { match } = this.props;
+        const repoName = decodeURIComponent(match.params.repository);
+        
+        const response = await api.get(`/repos/${repoName}/issues`, {
+            params: {
+              state: filterIssues[index].state,
+              per_page: 5,
+            },
+          });
+          
+        this.setState({
+            issues: response.data,
+        })
+
+    }
+
     render(){
-        const {repository, issues, loading} = this.state;
+        const {repository, issues, loading, filterIssues, filterIndex} = this.state;
         
         if(loading){
             return <Loading>Carregando</Loading>
@@ -61,6 +92,17 @@ class Repository extends Component {
                         <h1>{repository.name}</h1>
                         <p>{repository.description}</p>
                     </Owner>
+                    <IssueFilter active={filterIndex}>
+                        {filterIssues.map((filter, index) => (
+                        <button
+                            type="button"
+                            key={filter.label}
+                            onClick={() => this.handleFilterChange(index)}
+                        >
+                            {filter.label}
+                        </button>
+                        ))}
+                    </IssueFilter>
                     <IssueList>
                         {issues.map(issue => (
                             <li key={String(issue.id)}>

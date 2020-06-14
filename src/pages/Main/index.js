@@ -13,7 +13,7 @@ class Main extends Component{
         newRepo: '',
         repositories: [],
         loading: false,
-        error404: false,
+        error: false,
     };
 
     
@@ -41,12 +41,6 @@ class Main extends Component{
         })
     }
 
-    repositorioRepetido = () => {
-        const { repositories, newRepo } = this.state;
-        const resultado = repositories.filter(repository => repository.name === newRepo)
-        return resultado === [] ? false : true
-
-    }
 
     handleSubmit = async e => {
         e.preventDefault();
@@ -54,32 +48,34 @@ class Main extends Component{
         this.setState({
             loading: true
         })
+        const { newRepo, repositories} = this.state;
+        const hasRepo = repositories.find(r => r.name === newRepo);
 
         try{
-            if (this.repositorioRepetido()){
-                throw new Error('Repositório duplicado');
-            }else{
-                const { newRepo, repositories} = this.state;
-            
-                try{
-                    const response = await api.get(`/repos/${newRepo}`)
 
-                    const data = {
-                        name: response.data.full_name
-                    };
+            if (newRepo === '') throw new Error('Você precisa indicar um repositório');
+
+            if (hasRepo) throw new Error('Repositório duplicado');
             
-                    this.setState({
-                        repositories: [...repositories, data],
-                        newRepo: '',
-                        loading: false,
-                    })
-                }catch{
-                    throw new Error('Repositório não existe');
-                }
-            }
+            const response = await api.get(`/repos/${newRepo}`)
+
+            const data = {
+                name: response.data.full_name
+            };
+    
+            this.setState({
+                repositories: [...repositories, data],
+                newRepo: '',
+                loading: false,
+                error: false,
+            })
+                      
         }catch{
             this.setState({
-                error404: true,
+                error: true,
+            })  
+        }finally{
+            this.setState({
                 loading: false,
             })  
         }
@@ -87,14 +83,14 @@ class Main extends Component{
     }
 
     render(){
-        const { newRepo, repositories, loading, error404 } = this.state;
+        const { newRepo, repositories, loading, error } = this.state;
         return (
             <Container>
                 <h1>
                     <FaGithubAlt/>
                     Repositórios
                 </h1>
-                <Form onSubmit={this.handleSubmit} error404={error404}>
+                <Form onSubmit={this.handleSubmit} error={error}>
                     <input 
                         type="text"
                         placeholder="Adicionar repositório"
